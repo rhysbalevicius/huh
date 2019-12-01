@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	</head>
+	<body>
+	</body>
+	<script type="text/javascript" src="main.wasm.js"></script>
+	<script type="text/javascript">
+
+		const modules = {
+			"main" : {
+				data : new WebAssembly.Module(new Uint8Array(main)),
+				fns: {
+					"" : {
+						print : print = (i32) => console.log(i32),
+					}
+				}
+			},
+		};
+
+		let instance;
+		let instanceData;
+		const initInstance = (moduleName) => {
+			let { data, fns } = modules[moduleName];
+			instance = new WebAssembly.Instance(data, fns);
+			instanceData = new Uint8Array(instance.exports.mem.buffer);
+		};
+		initInstance("main");
+
+		const run = () => {
+			instance.exports.run();
+		};
+
+	</script>
+</body>
+</html>
