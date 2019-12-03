@@ -3,6 +3,45 @@
   (import "" "print" (func $print (param i32)))
   (memory (export "mem") 20) ;; 20*64K
 
+  ;; An if else conditional statement
+  ;;
+  (func $switch
+    (param $opCodeAddress i32)
+    (param $arg0Address i32)
+    (param $arg1Address i32)
+    (param $ip i32)
+    (result i32)
+
+    (local $branch i32) ;; the value of op(lhs, rhs) --
+                        ;; determines which address to return
+
+    ;; evaluate the branch condition
+    (set_local $branch
+      (call $binop
+        (local.get $opCodeAddress)
+        (local.get $arg0Address)
+        (local.get $arg1Address)
+      )
+    )
+
+    ;; determine which branch to execute
+    (if (i32.eq (local.get $branch) (i32.const 0))
+      (then
+        ;; return ip -> "else" branch
+        (return
+          (i32.add
+            (local.get $ip)
+            (i32.load8_u (local.get $ip)) ;; ip offset
+          )
+        )
+      )
+    )
+    ;; return ip -> "if" branch
+    (return (i32.add (local.get $ip) (i32.const 1)))
+
+  ) ;; end $switch
+
+
   ;; A binary operation
   ;;
   (func $binop
