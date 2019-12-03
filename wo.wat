@@ -2,7 +2,25 @@
 
   (import "" "print" (func $print (param i32)))
   (memory (export "mem") 20) ;; 20*64K
-  
+
+  ;; Program main()
+  ;;
+  (func (export "exec")
+    (param $ip i32) ;; program entry point
+
+    (loop ;; main program loop
+
+      ;; execute next instruction, update ip
+      (set_local $ip (call $next (local.get $ip)))
+
+      ;; halt once ip points to 0 in memory
+      (br_if 0 (i32.ne (i32.const 0) (i32.load8_u (local.get $ip))))
+
+    ) ;; end loop
+
+  ) ;; end $run
+
+
   ;; Evaluate the next instruction
   ;;
   (func $next
