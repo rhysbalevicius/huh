@@ -3,6 +3,52 @@
   (import "" "print" (func $print (param i32)))
   (memory (export "mem") 20) ;; 20*64K
 
+  ;; A "while true" statement
+  ;;
+  (func $loop
+    (param $lengthAddress i32)
+    (param $ip i32)
+    (result i32)
+
+    (local $inst i32)    ;; the current instruction being executed
+    (local $length i32)  ;; the number of instructions to be executed by the loop
+    (local $top i32)    ;; -> beginning of loop
+
+    ;; retrieve the number of instructions to execute
+    (set_local $length (i32.load8_u (local.get $lengthAddress)))
+
+    ;; store a copy of $ip, since we'll be modifying it
+    ;; points to the value which determines whether or not to halt
+    (set_local $top (local.get $ip))
+
+    ;; set $ip to point to the first instruction
+    (set_local $ip (i32.add (local.get $ip) (i32.const 1)))
+
+    (loop
+
+      ;; evaluate next instruction and increment ip to the next instruction
+      (set_local $ip (call $next (local.get $ip)))
+
+      ;; increment the instruction count
+      (set_local $inst (i32.add (local.get $inst) (i32.const 1)))
+
+      (br_if 0
+        (i32.ne (local.get $inst) (local.get $length))
+      )
+    )
+
+    ;; once a cycle of the loop has completed, check the value corresponding
+    ;; to the halt address -- if it's not 0, point ip to the top of the loop
+    (if (i32.load8_u (i32.load8_u (local.get $top)))
+      (then
+        (set_local $ip (i32.sub (local.get $top) (i32.const 2)))
+      )
+    )
+
+    (return (local.get $ip))
+  ) ;; end $loop
+
+
   ;; An if else conditional statement
   ;;
   (func $switch
