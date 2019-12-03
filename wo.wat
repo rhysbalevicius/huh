@@ -2,6 +2,66 @@
 
   (import "" "print" (func $print (param i32)))
   (memory (export "mem") 20) ;; 20*64K
+  
+  ;; Evaluate the next instruction
+  ;;
+  (func $next
+    (param $ip i32)
+    (result i32)
+
+    ;; execution halts once ip points to 0 (at the end of an instruction "chunk")
+    (if (i32.eq (i32.load8_u (local.get $ip)) (i32.const 1))
+      ;; binop
+      (then
+        ;; evaulate a binary operation and store the result in memory
+        (i32.store8
+          (i32.load8_u (tee_local $ip (i32.add (local.get $ip) (i32.const 1)))) ;; -> return address
+          (call $binop
+            (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> opcode address
+            (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> lhs arg address
+            (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> rhs address
+          )
+        )
+        ;; increment ip to point to the next instruction in memory
+        (set_local $ip (i32.add (local.get $ip) (i32.const 1)))
+      )
+    ;; conditional -- skip to memory[ip] if condition evaluates to false
+    (else (if (i32.eq (i32.load8_u (local.get $ip)) (i32.const 2))
+      (then
+        ;; compute the ip offset, if => 1, else => memory[ip]
+        (set_local $ip
+          (call $switch
+            (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> opcode address
+            (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> lhs arg address
+            (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> rhs address
+            (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> "else" branch offset
+          )
+        )
+      )
+    ;; jump -- go to instruction memory[ip]
+    (else (if (i32.eq (i32.load8_u (local.get $ip)) (i32.const 3))
+      (then
+        (set_local $ip
+          (i32.load8_u (i32.add (local.get $ip) (i32.const 1)))
+        )
+      )
+    ;; loop
+    (else (if (i32.eq (i32.load8_u (local.get $ip)) (i32.const 4))
+      (then
+        (set_local $ip
+          (call $loop
+            (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> length
+            (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> halt address
+          )
+        )
+      )
+    )))))))
+
+    ;; return $ip to continue program execution
+    (return (local.get $ip))
+
+  ) ;; end $next
+
 
   ;; A "while true" statement
   ;;
