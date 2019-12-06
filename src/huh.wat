@@ -1,7 +1,7 @@
 (module
 
-  (import "" "print" (func $print (param i32)))
-  (memory (export "mem") 20) ;; 20*64K
+  ;; (import "" "print" (func $print (param i32)))
+  (memory (export "mem") 1)
 
   ;; Program setup()
   (func (export "setup")
