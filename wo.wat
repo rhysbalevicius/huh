@@ -3,6 +3,17 @@
   (import "" "print" (func $print (param i32)))
   (memory (export "mem") 20) ;; 20*64K
 
+  ;; Program setup()
+  (func (export "setup")
+    (param $index i32)
+    (param $value i32)
+
+    (local $i32 i32)
+    (set_local $i32 (i32.mul (i32.const 4) (local.get $index)))
+
+    (i32.store (local.get $i32) (local.get $value))
+  )
+
   ;; Program main()
   ;;
   (func (export "exec")
@@ -14,7 +25,7 @@
       (set_local $ip (call $next (local.get $ip)))
 
       ;; halt once ip points to 0 in memory
-      (br_if 0 (i32.ne (i32.const 0) (i32.load8_u (local.get $ip))))
+      (br_if 0 (i32.ne (i32.const 0) (i32.load (i32.mul (i32.const 4) (local.get $ip)))))
 
     ) ;; end loop
 
@@ -28,13 +39,19 @@
     (result i32)
 
     ;; execution halts once ip points to 0 (at the end of an instruction "chunk")
-    (if (i32.eq (i32.load8_u (local.get $ip)) (i32.const 1))
+    (if (i32.eq (i32.load (i32.mul (i32.const 4) (local.get $ip))) (i32.const 1))
       ;; binop
       (then
         ;; evaulate a binary operation and store the result in memory
-        (i32.store8
-          (i32.load8_u (tee_local $ip (i32.add (local.get $ip) (i32.const 1)))) ;; -> return address
-          (call $binop
+        (i32.store
+          (i32.mul ;; -> return address
+            (i32.const 4)
+            (i32.load
+              (i32.mul
+                (i32.const 4)
+                (tee_local $ip (i32.add (local.get $ip) (i32.const 1)))))
+          )
+          (call $binop ;; -> return value
             (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> opcode address
             (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> lhs arg address
             (tee_local $ip (i32.add (local.get $ip) (i32.const 1))) ;; -> rhs address
@@ -44,7 +61,7 @@
         (set_local $ip (i32.add (local.get $ip) (i32.const 1)))
       )
     ;; conditional -- skip to memory[ip] if condition evaluates to false
-    (else (if (i32.eq (i32.load8_u (local.get $ip)) (i32.const 2))
+    (else (if (i32.eq (i32.load (i32.mul (i32.const 4) (local.get $ip))) (i32.const 2))
       (then
         ;; compute the ip offset, if => 1, else => memory[ip]
         (set_local $ip
@@ -57,14 +74,14 @@
         )
       )
     ;; jump -- go to instruction memory[ip]
-    (else (if (i32.eq (i32.load8_u (local.get $ip)) (i32.const 3))
+    (else (if (i32.eq (i32.load (i32.mul (i32.const 4) (local.get $ip))) (i32.const 3))
       (then
         (set_local $ip
-          (i32.load8_u (i32.add (local.get $ip) (i32.const 1)))
+          (i32.load (i32.mul (i32.const 4) (i32.add (local.get $ip) (i32.const 1))))
         )
       )
     ;; loop
-    (else (if (i32.eq (i32.load8_u (local.get $ip)) (i32.const 4))
+    (else (if (i32.eq (i32.load (i32.mul (i32.const 4) (local.get $ip))) (i32.const 4))
       (then
         (set_local $ip
           (call $loop
@@ -93,7 +110,7 @@
     (local $top i32)    ;; -> beginning of loop
 
     ;; retrieve the number of instructions to execute
-    (set_local $length (i32.load8_u (local.get $lengthAddress)))
+    (set_local $length (i32.load (i32.mul (i32.const 4) (local.get $lengthAddress))))
 
     ;; store a copy of $ip, since we'll be modifying it
     ;; points to the value which determines whether or not to halt
@@ -117,7 +134,7 @@
 
     ;; once a cycle of the loop has completed, check the value corresponding
     ;; to the halt address -- if it's not 0, point ip to the top of the loop
-    (if (i32.load8_u (i32.load8_u (local.get $top)))
+    (if (i32.load (i32.mul (i32.const 4) (i32.load (i32.mul (i32.const 4) (local.get $top)))))
       (then
         (set_local $ip (i32.sub (local.get $top) (i32.const 2)))
       )
@@ -155,7 +172,7 @@
         (return
           (i32.add
             (local.get $ip)
-            (i32.load8_u (local.get $ip)) ;; ip offset
+            (i32.load (i32.mul (i32.const 4) (local.get $ip))) ;; ip offset
           )
         )
       )
@@ -179,12 +196,12 @@
     (local $rhs i32)  ;; the righthand param to pass to the binop
 
     ;; load the opcode pointed to by $opCodeAddress
-    (set_local $opc (i32.load8_u (local.get $opCodeAddress)))
+    (set_local $opc (i32.load (i32.mul (i32.const 4) (local.get $opCodeAddress))))
 
     ;; load the arg addresses pointed to by $argAddress,
     ;; and then load their corresponding values
-    (set_local $lhs (i32.load8_u (i32.load8_u (local.get $arg0Address))))
-    (set_local $rhs (i32.load8_u (i32.load8_u (local.get $arg1Address))))
+    (set_local $lhs (i32.load (i32.mul (i32.const 4) (i32.load (i32.mul (i32.const 4) (local.get $arg0Address))))))
+    (set_local $rhs (i32.load (i32.mul (i32.const 4) (i32.load (i32.mul (i32.const 4) (local.get $arg1Address))))))
 
     ;; evaluate the binop, returning the result
     (if (i32.eq (local.get $opc) (i32.const 0))         ;; addition
