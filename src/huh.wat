@@ -3,17 +3,6 @@
   ;; (import "" "print" (func $print (param i32)))
   (memory (export "mem") 1)
 
-  ;; Program setup()
-  (func (export "setup")
-    (param $index i32)
-    (param $value i32)
-
-    (local $i32 i32)
-    (set_local $i32 (i32.mul (i32.const 4) (local.get $index)))
-
-    (i32.store (local.get $i32) (local.get $value))
-  )
-
   ;; Program main()
   ;;
   (func (export "exec")
