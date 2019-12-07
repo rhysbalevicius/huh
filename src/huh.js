@@ -1,15 +1,19 @@
+const repl = require('repl');
 const fs = require('fs');
 const readline = require('readline');
 const buf = fs.readFileSync('./huh.wasm');
 const mod = new WebAssembly.Module(new Uint8Array(buf));
-const fns = { "" : { print : (i32) => console.log(i32) } }
+const fns = { '' : { print : (i32) => console.log(i32) } }
 const instance = new WebAssembly.Instance(mod, fns);
 const instanceData = new Uint32Array(instance.exports.mem.buffer);
 
-const setupAndExec = (entry, source) => {
-  let i = entry;
-  for (let j in source) instance.exports.setup(i++, source[j]);
+const exec = entry => {
   instance.exports.exec(entry);
+};
+
+const setupAndExec = (entry, source) => {
+  instanceData.set(source, entry);
+  exec(entry);
 };
 
 const readAndExec = (fname) => {
@@ -19,9 +23,9 @@ const readAndExec = (fname) => {
   });
 
   lineReader.on('line', nextLine => {
-    const line = nextLine.split(" ");
+    const line = nextLine.split(' ');
     for (let i of line) {
-      if (i[0] === "#" || i[0] === ";" || i[0] === "/") break;
+      if (i[0] === '#' || i[0] === ';' || i[0] === '/') break;
       else {
         let n = Math.abs(parseInt(i));
         if (n >= 0) program.push(n);
@@ -31,8 +35,17 @@ const readAndExec = (fname) => {
 
   lineReader.on('close', () => {
     setupAndExec(0, program);
-    const i = Math.abs(parseInt(process.argv[3]));
-    if (i >= 0) console.log(instanceData[i]);
+    const r = repl.start('> ');
+    defineReplProp(r, 'data', instanceData, true);
+    defineReplProp(r, 'exec', exec);
+  });
+};
+
+const defineReplProp = (repl, name, value, enumerable=false, configurable=false) => {
+  Object.defineProperty(repl.context, name, {
+    configurable: configurable,
+    enumerable: enumerable,
+    value: value
   });
 };
 
@@ -44,9 +57,9 @@ if (fname) {
     } else if (err.code === 'ENOENT') {
       console.error(`File ${fname} does not exist`);
     } else {
-      console.error(`An unknown error has occurred`);
+      console.error('An unknown error has occurred');
     }
   });
 } else {
-  console.error("No file provided")
+  console.error('No file provided');
 }
