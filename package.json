@@ -1,0 +1,28 @@
+{
+  "name": "huh",
+  "version": "1.0",
+  "license": "MIT",
+  "description": "A minimalistic esolang written in WebAssembly",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/r-ba/huh.git"
+  },
+  "bugs": {
+    "url": "https://github.com/r-ba/huh/issues"
+  },
+  "author": {
+    "name": "Rhys Balevicius",
+    "email": "rhysbalevicius@gmail.com"
+  },
+  "keywords": [
+    "esolang",
+    "esoteric",
+    "language",
+    "webassembly",
+    "wasm"
+  ],
+  "engines": {
+    "node": ">=8.12"
+  },
+  "main": "src/huh.js"
+}
