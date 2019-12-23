@@ -1,6 +1,6 @@
 {
   "name": "huh",
-  "version": "1.0",
+  "version": "1.0.0",
   "license": "MIT",
   "description": "A minimalistic esolang written in WebAssembly",
   "repository": {
@@ -24,5 +24,12 @@
   "engines": {
     "node": ">=8.12"
   },
-  "main": "src/huh.js"
+  "main": "src/huh.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "chai": "4.0.2",
+    "mocha": "^6.2.2"
+  }
 }
