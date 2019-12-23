@@ -1,7 +1,7 @@
 const repl = require('repl');
 const fs = require('fs');
 const readline = require('readline');
-const buf = fs.readFileSync('./huh.wasm');
+const buf = fs.readFileSync(__dirname + '/huh.wasm');
 const mod = new WebAssembly.Module(new Uint8Array(buf));
 const fns = { '' : { print : (i32) => console.log(i32) } }
 const instance = new WebAssembly.Instance(mod, fns);
@@ -53,6 +53,7 @@ const fname = process.argv[2];
 if (fname) {
   fs.stat(fname, err => {
     if (err === null) {
+      console.log("Huh: Found "+fname);
       readAndExec(fname);
     } else if (err.code === 'ENOENT') {
       console.error(`File ${fname} does not exist`);
@@ -60,6 +61,17 @@ if (fname) {
       console.error('An unknown error has occurred');
     }
   });
+
+} else if (require.main === module) {
+  // called from command line
+  console.error('Huh: No file provided');
+  const r = repl.start('> ');
+  defineReplProp(r, 'data', instanceData, true);
+  defineReplProp(r, 'exec', exec);
+
 } else {
-  console.error('No file provided');
+  // called via require
+  module.exports = {
+    init: () => new WebAssembly.Instance(mod, fns).exports
+  };
 }
