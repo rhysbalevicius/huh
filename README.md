@@ -1,5 +1,7 @@
 ![Huh?](https://i.ibb.co/R06cZQ8/34174253.png)
 
+[![master branch tests](https://img.shields.io/travis/r-ba/huh/master.svg?label=master%20branch)](https://travis-ci.com/r-ba/huh)
+[![GitHub license](https://img.shields.io/badge/License-MIT-blue.svg)](https://raw.githubusercontent.com/r-ba/huh/master/LICENSE)
 ---
 
 A minimal interpreted esoteric language implemented in the WebAssembly text format.
@@ -27,47 +29,95 @@ Exactly.
 
 ---
 
-### How it works:
+### Usage
+
+A simple interpreter, which piggybacks off of the node.js repl, is provided by `src/huh.js`. Source code can be passed to the interpreter either as a file, or written manually from within the context of the repl. Note that files passed into the interpreter are executed before providing access to the repl.
+
+
+Inside the repl the interpreter's memory is exposed through a Uint32Array named `data`. Programs may be executed via a function named `exec()` that takes a single integer `entry` as it's argument which specifes where to begin reading in instructions from memory.
+
+For example:
+```
+$ node src/huh.js examples/fibonacci.huh
+Huh: Found examples/fibonacci.huh
+> data[34]
+75025
+> data.set([1,50,1,34,35],100)
+> exec(100)
+> data[50]
+28657
+```
+
+It's also possible to include instances of a *huh* interpreter from within other JavaScript files:
+```js
+const huh = require('./src/huh.js');
+const instance = huh.init();
+const data = new Uint32Array(instance.mem.buffer);
+data.set([1,0,0,0,0], 0);
+instance.exec();
+console.log(data[0]); // -> 2
+```
+
+---
+
+### How it works
 
 The interpreter first loads into memory an array of integers which specifies a program. Instructions are then read and executed sequentially beginning from an index, i.e. the entry point (zero by default).
 
-There are five different types of instructions with each being of the form `a0 ... ak`.
+A "program" is defined as a contiguous sequence of subarrays. Each subarray defines an "instruction". There are five different types of instructions:
 
-**Halt**
+##### *0. Halt*
 
 Execution halts once the instruction `0` is read.
 
 
-**Binary operations**
+##### *1. Binary operations*
 
 These are instructions of the form `1 w x y z` where `w` specifies the address to overwrite with the return value of the operation, `y` and `z` are the respective addresses of the left and right hand arguments, and `x` is an opcode in the range `[0, 24]` specifying the operation to be used. Note that if `x` is outside this range a value of `0` is returned by default.
 
-For reference here are the corresponding opcodes:
+A reference of the corresponding opcodes can be found at the bottom of this section.
+
+##### *2. Control flow*
+
+These are instructions of the form `2 w x y z ... 3 v ...` where `w` specifies the opcode used to evaluate the conditional expression, `x` and `y` are the respective left and right hand side arguments passed to `w`. To be properly defined `z` must be two plus the sum of the lengths the instructions in the corresponding if block. Finally, `v` is the number of statements in the else block.
+
+##### *3. Jump statements*
+
+These are instructions of the form `3 x` where `x` specifies which instruction to continue executing from.
+
+##### *4. Loops*
+
+These are instructions of the form `4 x y ...` where `x` specifies the number of instructions in the body of the loop, and `y` specifies the address in memory which is checked after each iteration. Execution of the loop continues as long as `y` points to non-zero value.
+
+##### Comments
+
+Within a file passed to the interpreter, any non-numeric characters are ignored and may be used for the sake of commenting. Furthermore, any appearance of `#`, `;`, or `/` causes the interpreter to skip to the next line.
+
+##### Opcodes:
 ```
-0 -> i32.add -- addition
-1 -> i32.sub -- subtraction
-2 -> i32.mul -- multiplication
-3 -> i32.div_s -- division (signed)
-4 -> i32.div_u -- division (unsigned)
-5 -> i32.rem_s -- remainder (signed)
-6 -> i32.rem_u -- remainder (unsigned)
-7 -> i32.and -- bitwise and
-8 -> i32.or -- bitwise or
-9 -> i32.xor -- bitwise xor
-10 -> i32.shl -- shift left
-11 -> i32.shr_s -- shift right (signed)
-12 -> i32.shr_u -- shift right (unsigned)
-13 -> i32.rotl -- rotate left
-14 -> i32.rotr -- rotate right
-15 -> i32.eq -- equality
-16 -> i32.ne -- inequality
-17 -> i32.lt_s -- less than (signed)
-18 -> i32.lt_u -- less than (unsigned)
-19 -> i32.le_s -- less than or equal to (signed)
-20 -> i32.le_u -- less than or equal to (unsigned)
-21 -> i32.ge_s -- greater than (signed)
-22 -> i32.ge_u -- greater than (unsigned)
-23 -> i32.ge_s -- greater than or equal to (signed)
-24 -> i32.ge_u -- greater than or equal to (unsigned)
+0 -> addition
+1 -> subtraction
+2 -> multiplication
+3 -> division (signed)
+4 -> division (unsigned)
+5 -> remainder (signed)
+6 -> remainder (unsigned)
+7 -> bitwise and
+8 -> bitwise or
+9 -> bitwise xor
+10 -> shift left
+11 -> shift right (signed)
+12 -> shift right (unsigned)
+13 -> rotate left
+14 -> rotate right
+15 -> equality
+16 -> inequality
+17 -> less than (signed)
+18 -> less than (unsigned)
+19 -> less than or equal to (signed)
+20 -> less than or equal to (unsigned)
+21 -> greater than (signed)
+22 -> greater than (unsigned)
+23 -> greater than or equal to (signed)
+24 -> greater than or equal to (unsigned)
 ```
-For more information regarding these operations see [here](https://github.com/sunfishcode/wasm-reference-manual/blob/master/WebAssembly.md#integer-arithmetic-instructions).
