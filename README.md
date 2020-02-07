@@ -79,7 +79,7 @@ A reference of the corresponding opcodes can be found at the bottom of this sect
 
 ##### *2. Control flow*
 
-These are instructions of the form `2 w x y z ... 3 v ...` where `w` specifies the opcode used to evaluate the conditional expression, `x` and `y` are the respective left and right hand side arguments passed to `w`. To be properly defined `z` must be two plus the sum of the lengths the instructions in the corresponding if block. Finally, `v` is the number of statements in the else block.
+These are instructions of the form `2 w x y z ... 3 v ...` where `w` specifies the opcode used to evaluate the conditional expression, `x` and `y` are the respective left and right hand side arguments passed to `w`. To be properly defined `z` must be the address of the else block, and `v` is the address of the first instruction outside of the else block.
 
 ##### *3. Jump statements*
 
